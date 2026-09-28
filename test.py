@@ -6,14 +6,14 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:17:28 by ksener          #+#    #+#               #
-#  Updated: 2026/09/24 16:20:36 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/28 12:04:25 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
 import json
 from numpy import argmax
 import torch
-from src.llm_sdk.llm_sdk import Small_LLM_Model
+from llm_sdk import Small_LLM_Model
 
 
 def main() -> None:
