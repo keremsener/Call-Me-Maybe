@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/09/28 17:11:36 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/28 17:50:41 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -38,6 +38,7 @@ def get_allowed_ids(
         small_llm_model.encode(name)[0]
         for name in valid_func_names
     ]
+    params_key_ids = small_llm_model.encode('", "parameters": {').tolist()
 
     if step == 0:
         return [bracket_id]
@@ -45,6 +46,18 @@ def get_allowed_ids(
         return [name_key_ids[0]]
     elif generated_text.endswith('"name": "'):
         return valid_func_ids
+
+    elif any(generated_text.endswith(name) for name in valid_func_names):
+        return params_key_ids
+
+    elif generated_text.endswith('", "parameters": {'):
+        for fn in get_functions():
+            if fn["name"] in generated_text:
+                selected_fn = fn
+                break
+        param_names = list(selected_fn["parameters"]["properties"].keys())
+        param_ids = [small_llm_model.encode(f'"{p}": ')[0] for p in param_names]
+        return param_ids
 
     return None
 
