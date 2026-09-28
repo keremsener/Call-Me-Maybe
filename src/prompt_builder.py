@@ -6,6 +6,23 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:15 by ksener          #+#    #+#               #
-#  Updated: 2026/09/24 16:29:16 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/28 15:39:50 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
+
+from .models import FuncDef
+import json
+
+
+def prompt_builder(funcs: list[FuncDef], user_prompt: str) -> str:
+    funcs_json = json.dumps([item.model_dump() for item in funcs], indent=2)
+    final_prompt = f"""
+You are a function calling assistant. 
+Select the most appropriate function from the list below based 
+on the user's request. Respond ONLY with a valid JSON object.
+Do not include any explanation or conversational text.
+Available Functions: {funcs_json}
+User Request: {user_prompt}
+JSON Response:
+"""
+    return final_prompt
