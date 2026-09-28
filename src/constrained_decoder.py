@@ -6,17 +6,24 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/09/28 12:03:14 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/28 16:13:03 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
 import json
 from numpy import argmax
 import torch
-from llm_sdk.llm_sdk import Small_LLM_Model
+from llm_sdk import Small_LLM_Model
 
 
-def main() -> None:
+def validate(logits: list[float], small_llm_model: Small_LLM_Model) -> list[float]:
+    bracket_id = small_llm_model.encode('{')[0]
+    for i in range(len(logits)):
+        if i != bracket_id:
+            logits[i] = -float('inf')
+    return logits
+
+def constrained_decoder() -> None:
     max_token = 50
     small_llm_model = Small_LLM_Model(dtype=torch.float16)
     test_input = "Question: What is the sum of 5 and 10?\nAnswer:"
@@ -26,6 +33,8 @@ def main() -> None:
         eos_id = eos_id[0]
     for _ in range(max_token):
         logits = small_llm_model.get_logits_from_input_ids(encode_list)
+        if _ == 0:
+            logits = validate(logits, small_llm_model)
         next_word_id = int(argmax(logits))
         if next_word_id == eos_id:
             break
@@ -35,4 +44,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    constrained_decoder()
