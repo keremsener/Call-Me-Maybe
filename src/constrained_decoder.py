@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/09/28 16:13:03 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/28 16:54:50 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -14,12 +14,11 @@ import json
 from numpy import argmax
 import torch
 from llm_sdk import Small_LLM_Model
+from parsing import get_functions
 
-
-def validate(logits: list[float], small_llm_model: Small_LLM_Model) -> list[float]:
-    bracket_id = small_llm_model.encode('{')[0]
+def validate(logits: list[float], allowed_ids: list[int]) -> list[float]:
     for i in range(len(logits)):
-        if i != bracket_id:
+        if i not in allowed_ids:
             logits[i] = -float('inf')
     return logits
 
@@ -31,10 +30,24 @@ def constrained_decoder() -> None:
     eos_id = small_llm_model.encode("<|endoftext|>").tolist()[0]
     if isinstance(eos_id, list):
         eos_id = eos_id[0]
+
+    bracket_id = small_llm_model.encode('{')[0]
+    valid_func_names = [fn["name"] for fn in get_functions()]
+    valid_func_ids = [small_llm_model.encode(name)[0] for name in valid_func_names]
+    name_key_ids = small_llm_model.encode('"name": "').tolist()
+
     for _ in range(max_token):
         logits = small_llm_model.get_logits_from_input_ids(encode_list)
+        generated_text = small_llm_model.decode(encode_list)
+
         if _ == 0:
-            logits = validate(logits, small_llm_model)
+            logits = validate(logits, [bracket_id])
+
+        if _ > 0:
+            if generated_text.endswith('{'):
+                logits = validate(logits, [name_key_ids[0]])
+            elif generated_text.endswith('"name": "'):
+                logits = validate(logits, valid_func_ids)
         next_word_id = int(argmax(logits))
         if next_word_id == eos_id:
             break

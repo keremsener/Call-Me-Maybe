@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/28 14:23:07 by ksener          #+#    #+#               #
-#  Updated: 2026/09/28 14:52:08 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/28 16:57:10 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -22,9 +22,3 @@ def parse_test_inputs(file_path: str) -> list[FuncCall]:
     with open(file_path, "r", encoding="utf-8") as file:
         data = json.load(file)
     return [FuncCall(**item) for item in data]
-
-if __name__ == "__main__":
-    funcs = parse_functions_definition("data/input/functions_definition.json")
-    tests = parse_test_inputs("data/input/function_calling_tests.json")
-    # print("Uploading func len:", len(funcs))
-    # print("Uploading test len:", len(tests))
