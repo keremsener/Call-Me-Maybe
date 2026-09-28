@@ -1,0 +1,16 @@
+[project]
+name = "call-me-maybe"
+version = "0.1.0"
+description = "LLM Management."
+authors = "Kerem Şener"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "llm_sdk",
+    "numpy>=2.2.6",
+    "pydantic>=2.13.5",
+    "torch>=2.14.0",
+]
+
+[tool.uv.sources]
+llm_sdk = {path="src/llm_sdk"}
