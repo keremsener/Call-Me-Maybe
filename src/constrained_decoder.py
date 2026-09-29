@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/09/29 12:52:57 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/29 13:05:27 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -35,7 +35,6 @@ def get_allowed_ids(
     all_functions = get_functions()
     valid_func_names = [fn["name"] for fn in all_functions]
 
-    selected_fn = None
     param_names = []
 
     for fn in all_functions:
@@ -68,6 +67,19 @@ def get_allowed_ids(
         encoded_param_list = [small_llm_model.encode(
             f'"{p}": ')[0] for p in param_names]
         return encoded_param_list
+    elif current_state == "EXPECT_PARAM_VALUE":
+        current_param = None
+        for p in param_names:
+            if generated_text.endswith(f'"{p}": '):
+                current_param = p
+                break      
+        if current_param:
+            param_type = selected_fn["parameters"][current_param]["type"]
+            if param_type == "number":
+                return [small_llm_model.encode(str(i))[0] for i in range(10)]
+            elif param_type == "string":
+                return [small_llm_model.encode('"')[0]]
+        
 
 
 def constrained_decoder() -> None:
@@ -114,7 +126,8 @@ def constrained_decoder() -> None:
             current_state = "EXPECT_PARAM_KEY"
         elif current_state == "EXPECT_PARAM_KEY" and next_word_id == allowed_ids[-1]:
             current_state = "EXPECT_PARAM_NAME"
-
+        elif current_state == "EXPECT_PARAM_NAME" and next_word_id in allowed_ids:
+                current_state = "EXPECT_PARAM_VALUE"
         if next_word_id == eos_id:
             break
 
