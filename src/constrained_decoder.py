@@ -6,11 +6,9 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/09/29 13:05:27 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/29 13:11:01 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
-
-import json
 
 from numpy import argmax
 import torch
@@ -68,18 +66,26 @@ def get_allowed_ids(
             f'"{p}": ')[0] for p in param_names]
         return encoded_param_list
     elif current_state == "EXPECT_PARAM_VALUE":
-        current_param = None
-        for p in param_names:
-            if generated_text.endswith(f'"{p}": '):
-                current_param = p
-                break      
+        written_params = [
+            p for p in param_names if f'"{p}":' in generated_text]
+        current_param = written_params[-1] if written_params else None
+
+        remaining_params = [p for p in param_names if p not in written_params]
+        if remaining_params:
+            exit_id = small_llm_model.encode(", ")[0]
+        else:
+            exit_id = small_llm_model.encode("}")[0]
+
         if current_param:
             param_type = selected_fn["parameters"][current_param]["type"]
             if param_type == "number":
-                return [small_llm_model.encode(str(i))[0] for i in range(10)]
+                digit_ids = [small_llm_model.encode(
+                    str(i))[0] for i in range(10)]
+                return digit_ids + [exit_id]
             elif param_type == "string":
-                return [small_llm_model.encode('"')[0]]
-        
+                return [small_llm_model.encode('"')[0], exit_id]
+    elif current_state == "EXPECT_MAIN_CLOSE":
+        return [small_llm_model.encode("}")[0]]
 
 
 def constrained_decoder() -> None:
@@ -127,7 +133,19 @@ def constrained_decoder() -> None:
         elif current_state == "EXPECT_PARAM_KEY" and next_word_id == allowed_ids[-1]:
             current_state = "EXPECT_PARAM_NAME"
         elif current_state == "EXPECT_PARAM_NAME" and next_word_id in allowed_ids:
-                current_state = "EXPECT_PARAM_VALUE"
+            current_state = "EXPECT_PARAM_VALUE"
+        elif current_state == "EXPECT_PARAM_VALUE":
+            comma_id = small_llm_model.encode(", ")[0]
+            close_params_id = small_llm_model.encode("}")[0]
+
+            if next_word_id == comma_id:
+                current_state = "EXPECT_PARAM_NAME"
+            elif next_word_id == close_params_id:
+                current_state = "EXPECT_MAIN_CLOSE"
+        elif current_state == "EXPECT_MAIN_CLOSE":
+            close_main_id = small_llm_model.encode("}")[0]
+            if next_word_id == close_main_id:
+                break
         if next_word_id == eos_id:
             break
 
