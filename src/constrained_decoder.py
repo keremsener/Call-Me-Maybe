@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/09/29 12:21:17 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/29 12:38:43 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -29,7 +29,7 @@ def validate(logits: list[float], allowed_ids: list[int]) -> list[float]:
 
 def get_allowed_ids(
     generated_text: str,
-    current_state:str,
+    current_state: str,
     small_llm_model: Small_LLM_Model,
 ) -> list[int]:
     all_functions = get_functions()
@@ -57,6 +57,14 @@ def get_allowed_ids(
         '", "parameters": {'
     ).tolist()
 
+    if current_state == "EXPECT_BRACKET":
+        return [bracket_id]
+    elif current_state == "EXPECT_NAME_KEY":
+        return name_key_ids
+    elif current_state == "EXPECT_FUNC_NAME":
+        return valid_func_ids
+    elif current_state == "EXPECT_PARAM_KEY":
+        return params_key_ids
 
 
 def constrained_decoder() -> None:
@@ -95,6 +103,12 @@ def constrained_decoder() -> None:
             logits = validate(logits, allowed_ids)
 
         next_word_id = int(argmax(logits))
+        if current_state == "EXPECT_BRACKET" and next_word_id in allowed_ids:
+            current_state = "EXPECT_NAME_KEY"
+        elif current_state == "EXPECT_NAME_KEY" and next_word_id == allowed_ids[-1]:
+            current_state = "EXPECT_FUNC_NAME"
+        elif current_state == "EXPECT_FUNC_NAME" and next_word_id in allowed_ids:
+            current_state = "EXPECT_PARAM_KEY"
 
         if next_word_id == eos_id:
             break
