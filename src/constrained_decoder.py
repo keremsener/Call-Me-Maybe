@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/09/29 13:11:01 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/29 13:55:07 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -81,7 +81,9 @@ def get_allowed_ids(
             if param_type == "number":
                 digit_ids = [small_llm_model.encode(
                     str(i))[0] for i in range(10)]
-                return digit_ids + [exit_id]
+                dot_id = small_llm_model.encode(".")[0]
+                minus_id = small_llm_model.encode("-")[0]
+                return digit_ids + [dot_id, minus_id, exit_id]
             elif param_type == "string":
                 return [small_llm_model.encode('"')[0], exit_id]
     elif current_state == "EXPECT_MAIN_CLOSE":
