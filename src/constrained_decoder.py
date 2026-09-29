@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/09/29 11:45:43 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/29 12:21:17 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -29,23 +29,23 @@ def validate(logits: list[float], allowed_ids: list[int]) -> list[float]:
 
 def get_allowed_ids(
     generated_text: str,
-    step: int,
+    current_state:str,
     small_llm_model: Small_LLM_Model,
 ) -> list[int]:
     all_functions = get_functions()
     valid_func_names = [fn["name"] for fn in all_functions]
 
-    # Seçilen fonksiyonu ve parametre isimlerini tespit ediyoruz.
     selected_fn = None
     param_names = []
 
     for fn in all_functions:
         if fn["name"] in generated_text:
             selected_fn = fn
-            param_names = list(fn["parameters"]["properties"].keys())
+            param_names = list(fn["parameters"].keys())
             break
 
     bracket_id = small_llm_model.encode("{")[0]
+    bracket_closed_id = small_llm_model.encode('},')[0]
     name_key_ids = small_llm_model.encode('"name": "').tolist()
 
     valid_func_ids = [
@@ -57,57 +57,6 @@ def get_allowed_ids(
         '", "parameters": {'
     ).tolist()
 
-    if step == 0:
-        return [bracket_id]
-
-    elif generated_text.endswith("{"):
-        return [name_key_ids[0]]
-
-    elif generated_text.endswith('"name": "'):
-        return valid_func_ids
-
-    elif any(
-        generated_text.endswith(name)
-        for name in valid_func_names
-    ):
-        return params_key_ids
-
-    elif generated_text.endswith('", "parameters": {'):
-        if param_names:
-            param_ids = [
-                small_llm_model.encode(f'"{p}": ')[0]
-                for p in param_names
-            ]
-            return param_ids
-
-    elif any(
-        generated_text.endswith(f'"{p}": ')
-        for p in param_names
-    ):
-        current_param = None
-
-        for p in param_names:
-            if generated_text.endswith(f'"{p}": '):
-                current_param = p
-                break
-
-        if current_param and selected_fn:
-            param_type = selected_fn["parameters"]["properties"][
-                current_param
-            ]["type"]
-
-            if param_type == "number":
-                digit_ids = [
-                    small_llm_model.encode(str(i))[0]
-                    for i in range(10)
-                ]
-                return digit_ids
-
-            elif param_type == "string":
-                quote_id = small_llm_model.encode('"')[0]
-                return [quote_id]
-
-    return None
 
 
 def constrained_decoder() -> None:
@@ -128,7 +77,7 @@ def constrained_decoder() -> None:
 
     if isinstance(eos_id, list):
         eos_id = eos_id[0]
-
+    current_state = "EXPECT_BRACKET"
     for step in range(max_token):
         logits = small_llm_model.get_logits_from_input_ids(
             encode_list
@@ -138,7 +87,7 @@ def constrained_decoder() -> None:
 
         allowed_ids = get_allowed_ids(
             generated_text,
-            step,
+            current_state,
             small_llm_model,
         )
 
