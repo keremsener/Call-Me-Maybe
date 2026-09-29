@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/09/29 13:55:07 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/29 14:09:13 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -14,7 +14,8 @@ from numpy import argmax
 import torch
 
 from llm_sdk import Small_LLM_Model
-from parsing import get_functions
+from .models import FuncDef
+from .prompt_builder import prompt_builder
 
 
 def validate(logits: list[float], allowed_ids: list[int]) -> list[float]:
@@ -29,11 +30,12 @@ def get_allowed_ids(
     generated_text: str,
     current_state: str,
     small_llm_model: Small_LLM_Model,
+    all_functions: list[dict]
 ) -> list[int]:
-    all_functions = get_functions()
     valid_func_names = [fn["name"] for fn in all_functions]
 
     param_names = []
+    selected_fn = None
 
     for fn in all_functions:
         if fn["name"] in generated_text:
@@ -76,7 +78,7 @@ def get_allowed_ids(
         else:
             exit_id = small_llm_model.encode("}")[0]
 
-        if current_param:
+        if current_param and selected_fn:
             param_type = selected_fn["parameters"][current_param]["type"]
             if param_type == "number":
                 digit_ids = [small_llm_model.encode(
@@ -90,17 +92,16 @@ def get_allowed_ids(
         return [small_llm_model.encode("}")[0]]
 
 
-def constrained_decoder() -> None:
+def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef]) -> str:
     max_token = 50
 
     small_llm_model = Small_LLM_Model(dtype=torch.float16)
 
-    test_input = (
-        "Question: What is the sum of 5 and 10?\n"
-        "Answer:"
-    )
+    all_functions = [f.model_dump() for f in parsed_funcs]
 
-    encode_list = small_llm_model.encode(test_input).tolist()[0]
+    text_input = prompt_builder(parsed_funcs, user_prompt)
+
+    encode_list = small_llm_model.encode(text_input).tolist()[0]
 
     eos_id = small_llm_model.encode(
         "<|endoftext|>"
@@ -108,6 +109,7 @@ def constrained_decoder() -> None:
 
     if isinstance(eos_id, list):
         eos_id = eos_id[0]
+
     current_state = "EXPECT_BRACKET"
     for step in range(max_token):
         logits = small_llm_model.get_logits_from_input_ids(
@@ -120,12 +122,14 @@ def constrained_decoder() -> None:
             generated_text,
             current_state,
             small_llm_model,
+            all_functions
         )
 
         if allowed_ids is not None:
             logits = validate(logits, allowed_ids)
 
         next_word_id = int(argmax(logits))
+
         if current_state == "EXPECT_BRACKET" and next_word_id in allowed_ids:
             current_state = "EXPECT_NAME_KEY"
         elif current_state == "EXPECT_NAME_KEY" and next_word_id == allowed_ids[-1]:
@@ -148,17 +152,10 @@ def constrained_decoder() -> None:
             close_main_id = small_llm_model.encode("}")[0]
             if next_word_id == close_main_id:
                 break
+
         if next_word_id == eos_id:
             break
 
         encode_list.append(next_word_id)
 
-        print(
-            small_llm_model.decode([next_word_id]),
-            end="",
-            flush=True,
-        )
-
-
-if __name__ == "__main__":
-    constrained_decoder()
+    return small_llm_model.decode(encode_list)
