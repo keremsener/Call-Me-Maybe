@@ -6,12 +6,15 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:09 by ksener          #+#    #+#               #
-#  Updated: 2026/09/29 14:46:29 by ksener          ###   ########.fr        #
+#  Updated: 2026/09/29 16:14:08 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
 from argparse import ArgumentParser
-from .parsing import parse_test_inputs
+from .parsing import parse_test_inputs, parse_functions_definition
+from .constrained_decoder import constrained_decoder
+from llm_sdk import Small_LLM_Model
+import json
 
 
 def terminal_parsing() -> tuple[str, str, str]:
@@ -27,10 +30,23 @@ def terminal_parsing() -> tuple[str, str, str]:
     return (args.functions_definition, args.input, args.output)
 
 
-def read_prompt() -> list:
-    init_prompt_list = parse_test_inputs(terminal_parsing()[1])
+def main() -> None:
+    func_path, input_path, output_path = terminal_parsing()
+    init_prompt_list = parse_test_inputs(input_path)
     prompt_list = [item.prompt for item in init_prompt_list]
-    return prompt_list
+    load_function_schemas = parse_functions_definition(func_path)
+    small_llm_model = Small_LLM_Model()
+    results = []
+    for prompt in prompt_list:
+        text = constrained_decoder(
+            prompt, load_function_schemas, small_llm_model)
+        # print(f"ÜRETİLEN HAM METİN: {repr(text)}", flush=True)
+        text = json.loads(text)
+        text["prompt"] = prompt
+        results.append(text)
+    with open(output_path, 'w', encoding='utf-8') as file:
+        json.dump(results, file, indent=2)
 
 
-read_prompt()
+if __name__ == "__main__":
+    main()
