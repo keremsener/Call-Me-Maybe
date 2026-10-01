@@ -6,22 +6,28 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:09 by ksener          #+#    #+#               #
-#  Updated: 2026/10/01 15:58:24 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 17:11:49 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
-import json
+"""Command-line entry point for the function-calling pipeline."""
 
+import json
 from argparse import ArgumentParser
 
-import torch  # pushlarken sil çünkü istenmiyor.
+import torch
 
+from llm_sdk import Small_LLM_Model
 from .constrained_decoder import constrained_decoder
 from .parsing import parse_functions_definition, parse_test_inputs
-from llm_sdk import Small_LLM_Model
 
 
 def terminal_parsing() -> tuple[str, str, str]:
+    """Parse CLI arguments for the project entry point.
+
+    Returns:
+    A tuple of function definition path, input prompt path, and output path.
+    """
     parser = ArgumentParser()
     parser.add_argument('--functions_definition', type=str,
                         default="data/input/functions_definition.json")
@@ -35,6 +41,7 @@ def terminal_parsing() -> tuple[str, str, str]:
 
 
 def main() -> None:
+    """Run the full function-calling evaluation pipeline."""
     func_path, input_path, output_path = terminal_parsing()
     init_prompt_list = parse_test_inputs(input_path)
     prompt_list = [item.prompt for item in init_prompt_list]

@@ -6,9 +6,11 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/10/01 16:12:41 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 17:05:10 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
+
+"""Constrained decoding for valid JSON function-call generation."""
 
 from numpy import argmax
 
@@ -19,6 +21,15 @@ from .get_allowed_ids import get_allowed_ids
 
 
 def validate(logits: list[float], allowed_ids: list[int]) -> list[float]:
+    """Mask invalid logits and keep only the allowed token ids.
+
+    Args:
+        logits: Raw next-token logits.
+        allowed_ids: Token ids allowed for the current state.
+
+    Returns:
+        The masked logits array.
+    """
     for i in range(len(logits)):
         if i not in allowed_ids:
             logits[i] = -float("inf")
@@ -30,6 +41,16 @@ def constrained_decoder(
         user_prompt: str,
         parsed_funcs: list[FuncDef],
         small_llm_model: Small_LLM_Model) -> str:
+    """Generate a function-call JSON object under structured decoding rules.
+
+    Args:
+        user_prompt: Natural-language request from the user.
+        parsed_funcs: Available function definitions.
+        small_llm_model: Local model wrapper used for encoding and decoding.
+
+    Returns:
+        The generated JSON string representing the function call.
+    """
     max_token = 50
 
     all_functions = [f.model_dump() for f in parsed_funcs]
