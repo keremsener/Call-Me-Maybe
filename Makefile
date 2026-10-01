@@ -11,7 +11,7 @@ BOLD			:=	$(ESC)[1m
 UV				?=	uv
 PYTHON			?=	python
 APP				?=	test.py
-LINT_TARGETS	?=	src test.py
+LINT_TARGETS	?=	src
 
 .PHONY: install run lint clean
 

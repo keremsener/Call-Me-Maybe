@@ -17,8 +17,8 @@ import json
 def prompt_builder(funcs: list[FuncDef], user_prompt: str) -> str:
     funcs_json = json.dumps([item.model_dump() for item in funcs], indent=2)
     final_prompt = f"""
-You are a function calling assistant. 
-Select the most appropriate function from the list below based 
+You are a function calling assistant.
+Select the most appropriate function from the list below based
 on the user's request. Respond ONLY with a valid JSON object.
 Do not include any explanation or conversational text.
 Available Functions: {funcs_json}

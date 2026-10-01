@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/10/01 15:27:20 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 15:59:42 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -26,7 +26,10 @@ def validate(logits: list[float], allowed_ids: list[int]) -> list[float]:
     return logits
 
 
-def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm_model: Small_LLM_Model) -> str:
+def constrained_decoder(
+        user_prompt: str,
+        parsed_funcs: list[FuncDef],
+        small_llm_model: Small_LLM_Model) -> str:
     max_token = 50
 
     all_functions = [f.model_dump() for f in parsed_funcs]
@@ -66,31 +69,39 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
         if allowed_ids is not None:
             logits = validate(logits, allowed_ids)
 
+        assert allowed_ids is not None
+
         next_word_id = int(argmax(logits))
         print(small_llm_model.decode([next_word_id]), end="", flush=True)
-        # sonra sil bu printi
 
-        if current_state == "EXPECT_BRACKET" and next_word_id in allowed_ids:
+        if (current_state == "EXPECT_BRACKET" and
+                next_word_id in allowed_ids):
             current_state = "EXPECT_NAME_KEY"
             current_index = -1
-        elif current_state == "EXPECT_NAME_KEY" and next_word_id == allowed_ids[-1]:
+        elif (current_state == "EXPECT_NAME_KEY" and
+              next_word_id == allowed_ids[-1]):
             if current_index == name_key_len - 1:
                 current_state = "EXPECT_FUNC_NAME"
                 current_index = -1
-        elif current_state == "EXPECT_FUNC_NAME" and next_word_id in allowed_ids:
+        elif (current_state == "EXPECT_FUNC_NAME" and
+              next_word_id in allowed_ids):
             test_text = small_llm_model.decode(encode_list + [next_word_id])
             valid_func_names = [fn["name"] for fn in all_functions]
 
             if any(test_text.endswith(fname) for fname in valid_func_names):
                 current_state = "EXPECT_PARAM_KEY"
                 current_index = -1
-        elif current_state == "EXPECT_PARAM_KEY" and next_word_id == allowed_ids[-1]:
+        elif (current_state == "EXPECT_PARAM_KEY" and
+              next_word_id == allowed_ids[-1]):
             if current_index == param_key_len - 1:
                 current_state = "EXPECT_PARAM_NAME"
                 current_index = -1
-        elif current_state == "EXPECT_PARAM_NAME" and next_word_id == allowed_ids[-1]:
+        elif (current_state == "EXPECT_PARAM_NAME" and
+              next_word_id == allowed_ids[-1]):
             selected_fn = next(
-                (fn for fn in all_functions if fn["name"] in generated_text), None)
+                (fn for fn in all_functions if fn["name"] in generated_text),
+                None,
+            )
             param_names = list(
                 selected_fn["parameters"].keys()) if selected_fn else []
             written = [p for p in param_names if f'"{p}": ' in generated_text]
@@ -98,8 +109,11 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
 
             if remaining:
                 target_param = remaining[0]
-                param_name_len = len(small_llm_model.encode(
-                    f'"{target_param}": ').tolist()[0])
+                param_name_len = len(
+                    small_llm_model.encode(
+                        f'"{target_param}": '
+                    ).tolist()[0]
+                )
 
                 if current_index == param_name_len - 1:
                     current_state = "EXPECT_PARAM_VALUE"
@@ -125,5 +139,6 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
 
         encode_list.append(next_word_id)
         current_index += 1
+
     print()
     return small_llm_model.decode(encode_list[encode_list_init_len:])

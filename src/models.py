@@ -13,6 +13,7 @@
 from pydantic import BaseModel, Field
 from typing import Any
 
+
 class ParamDef(BaseModel):
     type: str
 
@@ -30,6 +31,7 @@ class FuncDef(BaseModel):
 
 class FuncCall(BaseModel):
     prompt: str
+
 
 class FuncRes(BaseModel):
     name: str

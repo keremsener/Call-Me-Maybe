@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/29 14:12:55 by ksener          #+#    #+#               #
-#  Updated: 2026/10/01 15:17:26 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 16:02:57 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -19,7 +19,7 @@ def get_allowed_ids(
     small_llm_model: Small_LLM_Model,
     all_functions: list[dict],
     current_index: int
-) -> list[int]:
+) -> list[int] | None:
     valid_func_names = [fn["name"] for fn in all_functions]
 
     param_names = []
@@ -52,7 +52,7 @@ def get_allowed_ids(
         return [params_key_ids[current_index]]
     elif current_state == "EXPECT_PARAM_NAME":
         written_params = [
-            p for p in param_names if f'"{p}": ' in generated_text] 
+            p for p in param_names if f'"{p}": ' in generated_text]
         remaining_params = [p for p in param_names if p not in written_params]
 
         if remaining_params:
@@ -99,3 +99,5 @@ def get_allowed_ids(
                 return allowed_tokens
     elif current_state == "EXPECT_MAIN_CLOSE":
         return small_llm_model.encode("}").tolist()[0]
+
+    return None

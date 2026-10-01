@@ -6,16 +6,19 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:09 by ksener          #+#    #+#               #
-#  Updated: 2026/10/01 15:43:48 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 15:58:24 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
-from argparse import ArgumentParser
-from .parsing import parse_test_inputs, parse_functions_definition
-from .constrained_decoder import constrained_decoder
-from llm_sdk import Small_LLM_Model
 import json
-import torch  # pushlarken sil çünkü istenmiyor. LLM Hızlı çalışsın diye ekledik
+
+from argparse import ArgumentParser
+
+import torch  # pushlarken sil çünkü istenmiyor.
+
+from .constrained_decoder import constrained_decoder
+from .parsing import parse_functions_definition, parse_test_inputs
+from llm_sdk import Small_LLM_Model
 
 
 def terminal_parsing() -> tuple[str, str, str]:
@@ -39,8 +42,8 @@ def main() -> None:
     small_llm_model = Small_LLM_Model(dtype=torch.float16)
     results = []
     for prompt in prompt_list:
-        text = constrained_decoder(
-            prompt, load_function_schemas, small_llm_model)
+        text = constrained_decoder(prompt, load_function_schemas,
+                                   small_llm_model)
         parsed_json = json.loads(text)
         ordered_result = {"prompt": prompt}
         ordered_result.update(parsed_json)
