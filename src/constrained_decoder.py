@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/10/01 12:47:09 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 15:27:20 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -52,7 +52,8 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
             encode_list
         )
 
-        generated_text = small_llm_model.decode(encode_list)
+        generated_text = small_llm_model.decode(
+            encode_list[encode_list_init_len:])
 
         allowed_ids = get_allowed_ids(
             generated_text,
@@ -66,6 +67,8 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
             logits = validate(logits, allowed_ids)
 
         next_word_id = int(argmax(logits))
+        print(small_llm_model.decode([next_word_id]), end="", flush=True)
+        # sonra sil bu printi
 
         if current_state == "EXPECT_BRACKET" and next_word_id in allowed_ids:
             current_state = "EXPECT_NAME_KEY"
@@ -79,15 +82,28 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
             valid_func_names = [fn["name"] for fn in all_functions]
 
             if any(test_text.endswith(fname) for fname in valid_func_names):
-                current_state = "EXPECT_PARAM_KEY"  # Uzunluk kontrolü yok, sadece state değişir
+                current_state = "EXPECT_PARAM_KEY"
                 current_index = -1
         elif current_state == "EXPECT_PARAM_KEY" and next_word_id == allowed_ids[-1]:
             if current_index == param_key_len - 1:
                 current_state = "EXPECT_PARAM_NAME"
                 current_index = -1
-        elif current_state == "EXPECT_PARAM_NAME" and next_word_id in allowed_ids:
-            current_state = "EXPECT_PARAM_VALUE"
-            current_index = -1
+        elif current_state == "EXPECT_PARAM_NAME" and next_word_id == allowed_ids[-1]:
+            selected_fn = next(
+                (fn for fn in all_functions if fn["name"] in generated_text), None)
+            param_names = list(
+                selected_fn["parameters"].keys()) if selected_fn else []
+            written = [p for p in param_names if f'"{p}": ' in generated_text]
+            remaining = [p for p in param_names if p not in written]
+
+            if remaining:
+                target_param = remaining[0]
+                param_name_len = len(small_llm_model.encode(
+                    f'"{target_param}": ').tolist()[0])
+
+                if current_index == param_name_len - 1:
+                    current_state = "EXPECT_PARAM_VALUE"
+                    current_index = -1
         elif current_state == "EXPECT_PARAM_VALUE":
             comma_ids = small_llm_model.encode(", ").tolist()[0]
             close_params_ids = small_llm_model.encode("}").tolist()[0]
@@ -101,6 +117,7 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
         elif current_state == "EXPECT_MAIN_CLOSE":
             close_main_id = small_llm_model.encode("}").tolist()[0]
             if next_word_id in close_main_id:
+                encode_list.append(next_word_id)
                 break
 
         if next_word_id == eos_id:
@@ -108,5 +125,5 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
 
         encode_list.append(next_word_id)
         current_index += 1
-
+    print()
     return small_llm_model.decode(encode_list[encode_list_init_len:])

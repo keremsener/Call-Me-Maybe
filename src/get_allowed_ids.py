@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/29 14:12:55 by ksener          #+#    #+#               #
-#  Updated: 2026/10/01 12:59:25 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 15:17:26 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -51,11 +51,17 @@ def get_allowed_ids(
     elif current_state == "EXPECT_PARAM_KEY":
         return [params_key_ids[current_index]]
     elif current_state == "EXPECT_PARAM_NAME":
-        encoded_param_list = []
-        for p in param_names:
-            encoded_param_list.extend(
-                small_llm_model.encode(f'"{p}": ').tolist()[0])
-        return encoded_param_list
+        written_params = [
+            p for p in param_names if f'"{p}": ' in generated_text] 
+        remaining_params = [p for p in param_names if p not in written_params]
+
+        if remaining_params:
+            target_param = remaining_params[0]
+            encoded_param = small_llm_model.encode(
+                f'"{target_param}": ').tolist()[0]
+            return [encoded_param[current_index]]
+        else:
+            return small_llm_model.encode("}").tolist()[0]
     elif current_state == "EXPECT_PARAM_VALUE":
         written_params = [
             p for p in param_names if f'"{p}":' in generated_text]
@@ -69,6 +75,8 @@ def get_allowed_ids(
 
         if current_param and selected_fn:
             param_type = selected_fn["parameters"][current_param]["type"]
+            has_value_started = not generated_text.rstrip().endswith(
+                f'"{current_param}":')
             if param_type == "number":
                 digit_ids = []
                 for i in range(10):
@@ -76,8 +84,18 @@ def get_allowed_ids(
                         small_llm_model.encode(str(i)).tolist()[0])
                 dot_id = small_llm_model.encode(".").tolist()[0]
                 minus_id = small_llm_model.encode("-").tolist()[0]
-                return digit_ids + dot_id + minus_id + exit_id
+                allowed_tokens = digit_ids + dot_id + minus_id
+                if has_value_started:
+                    allowed_tokens.extend(exit_id)
+
+                return allowed_tokens
+
             elif param_type == "string":
-                return small_llm_model.encode('"')[0].tolist() + exit_id
+                allowed_tokens = small_llm_model.encode('"').tolist()[0]
+
+                if has_value_started:
+                    allowed_tokens.extend(exit_id)
+
+                return allowed_tokens
     elif current_state == "EXPECT_MAIN_CLOSE":
         return small_llm_model.encode("}").tolist()[0]
