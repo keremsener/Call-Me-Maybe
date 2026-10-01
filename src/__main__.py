@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:09 by ksener          #+#    #+#               #
-#  Updated: 2026/10/01 15:19:15 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 15:43:48 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -41,9 +41,10 @@ def main() -> None:
     for prompt in prompt_list:
         text = constrained_decoder(
             prompt, load_function_schemas, small_llm_model)
-        text = json.loads(text)
-        text["prompt"] = prompt
-        results.append(text)
+        parsed_json = json.loads(text)
+        ordered_result = {"prompt": prompt}
+        ordered_result.update(parsed_json)
+        results.append(ordered_result)
     with open(output_path, 'w', encoding='utf-8') as file:
         json.dump(results, file, indent=2)
 
