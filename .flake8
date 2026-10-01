@@ -1,0 +1,8 @@
+[flake8]
+exclude =
+    .git,
+    .venv,
+    .build,
+    build,
+    dist,
+    llm_sdk,
