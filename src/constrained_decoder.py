@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/09/29 14:14:09 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 12:24:54 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -27,16 +27,15 @@ def validate(logits: list[float], allowed_ids: list[int]) -> list[float]:
     return logits
 
 
-def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef]) -> str:
+def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm_model: Small_LLM_Model) -> str:
     max_token = 50
-
-    small_llm_model = Small_LLM_Model(dtype=torch.float16)
 
     all_functions = [f.model_dump() for f in parsed_funcs]
 
     text_input = prompt_builder(parsed_funcs, user_prompt)
 
     encode_list = small_llm_model.encode(text_input).tolist()[0]
+    encode_list_init_len = len(encode_list)
 
     eos_id = small_llm_model.encode(
         "<|endoftext|>"
@@ -76,16 +75,16 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef]) -> str:
         elif current_state == "EXPECT_PARAM_NAME" and next_word_id in allowed_ids:
             current_state = "EXPECT_PARAM_VALUE"
         elif current_state == "EXPECT_PARAM_VALUE":
-            comma_id = small_llm_model.encode(", ")[0]
-            close_params_id = small_llm_model.encode("}")[0]
+            comma_ids = small_llm_model.encode(", ").tolist()[0]
+            close_params_ids = small_llm_model.encode("}").tolist()[0]
 
-            if next_word_id == comma_id:
+            if next_word_id in comma_ids:
                 current_state = "EXPECT_PARAM_NAME"
-            elif next_word_id == close_params_id:
+            elif next_word_id in close_params_ids:
                 current_state = "EXPECT_MAIN_CLOSE"
         elif current_state == "EXPECT_MAIN_CLOSE":
-            close_main_id = small_llm_model.encode("}")[0]
-            if next_word_id == close_main_id:
+            close_main_id = small_llm_model.encode("}").tolist()[0]
+            if next_word_id in close_main_id:
                 break
 
         if next_word_id == eos_id:
@@ -93,4 +92,4 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef]) -> str:
 
         encode_list.append(next_word_id)
 
-    return small_llm_model.decode(encode_list)
+    return small_llm_model.decode(encode_list[encode_list_init_len:])

@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/29 14:12:55 by ksener          #+#    #+#               #
-#  Updated: 2026/09/29 14:14:26 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 12:23:12 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -31,19 +31,17 @@ def get_allowed_ids(
             break
 
     bracket_id = small_llm_model.encode("{")[0]
-    name_key_ids = small_llm_model.encode('"name": "').tolist()
+    name_key_ids = small_llm_model.encode('"name": "').tolist()[0]
 
-    valid_func_ids = [
-        small_llm_model.encode(name)[0]
-        for name in valid_func_names
-    ]
+    valid_func_ids = [small_llm_model.encode(
+        name)[0] for name in valid_func_names]
 
     params_key_ids = small_llm_model.encode(
         '", "parameters": {'
-    ).tolist()
+    ).tolist()[0]
 
     if current_state == "EXPECT_BRACKET":
-        return [bracket_id]
+        return bracket_id
     elif current_state == "EXPECT_NAME_KEY":
         return name_key_ids
     elif current_state == "EXPECT_FUNC_NAME":
