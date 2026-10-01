@@ -6,12 +6,11 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/10/01 12:24:54 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 12:47:09 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
 from numpy import argmax
-import torch
 
 from llm_sdk import Small_LLM_Model
 from .models import FuncDef
@@ -36,7 +35,9 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
 
     encode_list = small_llm_model.encode(text_input).tolist()[0]
     encode_list_init_len = len(encode_list)
-
+    name_key_len = len(small_llm_model.encode('"name": "').tolist()[0])
+    param_key_len = len(small_llm_model.encode(
+        '", "parameters": {').tolist()[0])
     eos_id = small_llm_model.encode(
         "<|endoftext|>"
     ).tolist()[0]
@@ -45,6 +46,7 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
         eos_id = eos_id[0]
 
     current_state = "EXPECT_BRACKET"
+    current_index = 0
     for step in range(max_token):
         logits = small_llm_model.get_logits_from_input_ids(
             encode_list
@@ -56,7 +58,8 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
             generated_text,
             current_state,
             small_llm_model,
-            all_functions
+            all_functions,
+            current_index
         )
 
         if allowed_ids is not None:
@@ -66,22 +69,35 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
 
         if current_state == "EXPECT_BRACKET" and next_word_id in allowed_ids:
             current_state = "EXPECT_NAME_KEY"
+            current_index = -1
         elif current_state == "EXPECT_NAME_KEY" and next_word_id == allowed_ids[-1]:
-            current_state = "EXPECT_FUNC_NAME"
+            if current_index == name_key_len - 1:
+                current_state = "EXPECT_FUNC_NAME"
+                current_index = -1
         elif current_state == "EXPECT_FUNC_NAME" and next_word_id in allowed_ids:
-            current_state = "EXPECT_PARAM_KEY"
+            test_text = small_llm_model.decode(encode_list + [next_word_id])
+            valid_func_names = [fn["name"] for fn in all_functions]
+
+            if any(test_text.endswith(fname) for fname in valid_func_names):
+                current_state = "EXPECT_PARAM_KEY"  # Uzunluk kontrolü yok, sadece state değişir
+                current_index = -1
         elif current_state == "EXPECT_PARAM_KEY" and next_word_id == allowed_ids[-1]:
-            current_state = "EXPECT_PARAM_NAME"
+            if current_index == param_key_len - 1:
+                current_state = "EXPECT_PARAM_NAME"
+                current_index = -1
         elif current_state == "EXPECT_PARAM_NAME" and next_word_id in allowed_ids:
             current_state = "EXPECT_PARAM_VALUE"
+            current_index = -1
         elif current_state == "EXPECT_PARAM_VALUE":
             comma_ids = small_llm_model.encode(", ").tolist()[0]
             close_params_ids = small_llm_model.encode("}").tolist()[0]
 
             if next_word_id in comma_ids:
                 current_state = "EXPECT_PARAM_NAME"
+                current_index = -1
             elif next_word_id in close_params_ids:
                 current_state = "EXPECT_MAIN_CLOSE"
+                current_index = -1
         elif current_state == "EXPECT_MAIN_CLOSE":
             close_main_id = small_llm_model.encode("}").tolist()[0]
             if next_word_id in close_main_id:
@@ -91,5 +107,6 @@ def constrained_decoder(user_prompt: str, parsed_funcs: list[FuncDef], small_llm
             break
 
         encode_list.append(next_word_id)
+        current_index += 1
 
     return small_llm_model.decode(encode_list[encode_list_init_len:])
