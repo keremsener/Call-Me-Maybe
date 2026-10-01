@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:09 by ksener          #+#    #+#               #
-#  Updated: 2026/09/29 16:14:08 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/01 12:06:32 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -15,7 +15,7 @@ from .parsing import parse_test_inputs, parse_functions_definition
 from .constrained_decoder import constrained_decoder
 from llm_sdk import Small_LLM_Model
 import json
-
+import torch #pushlarken sil çünkü istenmiyor. LLM Hızlı çalışsın diye ekledik
 
 def terminal_parsing() -> tuple[str, str, str]:
     parser = ArgumentParser()
@@ -35,12 +35,12 @@ def main() -> None:
     init_prompt_list = parse_test_inputs(input_path)
     prompt_list = [item.prompt for item in init_prompt_list]
     load_function_schemas = parse_functions_definition(func_path)
-    small_llm_model = Small_LLM_Model()
+    small_llm_model = Small_LLM_Model(dtype=torch.float16)
     results = []
     for prompt in prompt_list:
         text = constrained_decoder(
             prompt, load_function_schemas, small_llm_model)
-        # print(f"ÜRETİLEN HAM METİN: {repr(text)}", flush=True)
+        print(f"ÜRETİLEN HAM METİN: {repr(text)}", flush=True)
         text = json.loads(text)
         text["prompt"] = prompt
         results.append(text)
