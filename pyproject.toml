@@ -9,7 +9,6 @@ dependencies = [
     "llm_sdk",
     "numpy>=2.2.6",
     "pydantic>=2.13.5",
-    "torch>=2.14.0",
 ]
 
 [tool.uv.sources]

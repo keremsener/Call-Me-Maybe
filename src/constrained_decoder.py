@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/10/01 17:05:10 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/08 11:44:29 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -15,7 +15,7 @@
 from numpy import argmax
 
 from llm_sdk import Small_LLM_Model
-from .models import FuncDef
+from .models import FuncDef, ExpectState
 from .prompt_builder import prompt_builder
 from .get_allowed_ids import get_allowed_ids
 
@@ -69,9 +69,9 @@ def constrained_decoder(
     if isinstance(eos_id, list):
         eos_id = eos_id[0]
 
-    current_state = "EXPECT_BRACKET"
+    current_state = ExpectState.BRACKET
     current_index = 0
-    for step in range(max_token):
+    for _ in range(max_token):
         logits = small_llm_model.get_logits_from_input_ids(
             encode_list
         )
@@ -95,29 +95,29 @@ def constrained_decoder(
         next_word_id = int(argmax(logits))
         print(small_llm_model.decode([next_word_id]), end="", flush=True)
 
-        if (current_state == "EXPECT_BRACKET" and
+        if (current_state == ExpectState.BRACKET and
                 next_word_id in allowed_ids):
-            current_state = "EXPECT_NAME_KEY"
+            current_state = ExpectState.NAME_KEY
             current_index = -1
-        elif (current_state == "EXPECT_NAME_KEY" and
+        elif (current_state == ExpectState.NAME_KEY and
               next_word_id == allowed_ids[-1]):
             if current_index == name_key_len - 1:
-                current_state = "EXPECT_FUNC_NAME"
+                current_state = ExpectState.FUNC_NAME
                 current_index = -1
-        elif (current_state == "EXPECT_FUNC_NAME" and
+        elif (current_state == ExpectState.FUNC_NAME and
               next_word_id in allowed_ids):
             test_text = small_llm_model.decode(encode_list + [next_word_id])
             valid_func_names = [fn["name"] for fn in all_functions]
 
             if any(test_text.endswith(fname) for fname in valid_func_names):
-                current_state = "EXPECT_PARAM_KEY"
+                current_state = ExpectState.PARAM_KEY
                 current_index = -1
-        elif (current_state == "EXPECT_PARAM_KEY" and
+        elif (current_state == ExpectState.PARAM_KEY and
               next_word_id == allowed_ids[-1]):
             if current_index == param_key_len - 1:
-                current_state = "EXPECT_PARAM_NAME"
+                current_state = ExpectState.PARAM_NAME
                 current_index = -1
-        elif (current_state == "EXPECT_PARAM_NAME" and
+        elif (current_state == ExpectState.PARAM_NAME and
               next_word_id == allowed_ids[-1]):
             selected_fn = next(
                 (fn for fn in all_functions if fn["name"] in generated_text),
@@ -137,19 +137,19 @@ def constrained_decoder(
                 )
 
                 if current_index == param_name_len - 1:
-                    current_state = "EXPECT_PARAM_VALUE"
+                    current_state = ExpectState.PARAM_VALUE
                     current_index = -1
-        elif current_state == "EXPECT_PARAM_VALUE":
+        elif current_state == ExpectState.PARAM_VALUE:
             comma_ids = small_llm_model.encode(", ").tolist()[0]
             close_params_ids = small_llm_model.encode("}").tolist()[0]
 
             if next_word_id in comma_ids:
-                current_state = "EXPECT_PARAM_NAME"
+                current_state = ExpectState.PARAM_NAME
                 current_index = -1
             elif next_word_id in close_params_ids:
-                current_state = "EXPECT_MAIN_CLOSE"
+                current_state = ExpectState.MAIN_CLOSE
                 current_index = -1
-        elif current_state == "EXPECT_MAIN_CLOSE":
+        elif current_state == ExpectState.MAIN_CLOSE:
             close_main_id = small_llm_model.encode("}").tolist()[0]
             if next_word_id in close_main_id:
                 encode_list.append(next_word_id)

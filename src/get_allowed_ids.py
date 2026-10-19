@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/29 14:12:55 by ksener          #+#    #+#               #
-#  Updated: 2026/10/01 17:05:12 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/08 11:36:47 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -15,6 +15,7 @@
 from typing import Any
 
 from llm_sdk import Small_LLM_Model
+from .models import ExpectState
 
 
 def _encode_token_ids(model: Small_LLM_Model, text: str) -> list[int]:
@@ -37,7 +38,7 @@ def _encode_token_ids(model: Small_LLM_Model, text: str) -> list[int]:
 
 def get_allowed_ids(
     generated_text: str,
-    current_state: str,
+    current_state: ExpectState,
     small_llm_model: Small_LLM_Model,
     all_functions: list[dict[str, Any]],
     current_index: int,
@@ -77,15 +78,15 @@ def get_allowed_ids(
         '", "parameters": {',
     )
 
-    if current_state == "EXPECT_BRACKET":
+    if current_state == ExpectState.BRACKET:
         return bracket_id
-    if current_state == "EXPECT_NAME_KEY":
+    if current_state == ExpectState.NAME_KEY:
         return [name_key_ids[current_index]]
-    if current_state == "EXPECT_FUNC_NAME":
+    if current_state == ExpectState.FUNC_NAME:
         return valid_func_ids
-    if current_state == "EXPECT_PARAM_KEY":
+    if current_state == ExpectState.PARAM_KEY:
         return [params_key_ids[current_index]]
-    if current_state == "EXPECT_PARAM_NAME":
+    if current_state == ExpectState.PARAM_NAME:
         written_params = [
             p for p in param_names if f'"{p}": ' in generated_text
         ]
@@ -99,7 +100,7 @@ def get_allowed_ids(
             )
             return [encoded_param[current_index]]
         return _encode_token_ids(small_llm_model, "}")
-    if current_state == "EXPECT_PARAM_VALUE":
+    if current_state == ExpectState.PARAM_VALUE:
         written_params = [
             p for p in param_names if f'"{p}":' in generated_text
         ]
@@ -138,7 +139,7 @@ def get_allowed_ids(
                     allowed_tokens.extend(exit_id)
 
                 return allowed_tokens
-    elif current_state == "EXPECT_MAIN_CLOSE":
+    elif current_state == ExpectState.MAIN_CLOSE:
         return _encode_token_ids(small_llm_model, "}")
 
     return None

@@ -120,13 +120,13 @@ The model is instructed to output only valid JSON and nothing else.
 
 The decoder does not simply accept model output freely. Instead, it tracks a current generation state such as:
 
-- `EXPECT_BRACKET`
-- `EXPECT_NAME_KEY`
-- `EXPECT_FUNC_NAME`
-- `EXPECT_PARAM_KEY`
-- `EXPECT_PARAM_NAME`
-- `EXPECT_PARAM_VALUE`
-- `EXPECT_MAIN_CLOSE`
+- `BRACKET`
+- `NAME_KEY`
+- `FUNC_NAME`
+- `PARAM_KEY`
+- `PARAM_NAME`
+- `PARAM_VALUE`
+- `MAIN_CLOSE`
 
 These states correspond to the expected shape of a function-call JSON object. For each state, the code computes which token IDs are allowed next and masks the rest.
 

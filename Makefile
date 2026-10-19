@@ -12,7 +12,7 @@ LINT_TARGETS  ?= .
 
 install:
 	@printf '\033[0;34m[install]\033[0m Installing dependencies\n'
-	@$(UV) sync --active
+	@$(UV) sync
 
 
 # Run
@@ -50,14 +50,28 @@ lint-strict:
 # Clean
 
 clean:
-	@printf '\033[0;31m[clean]\033[0m Removing Python caches\n'
-	@find . -type d \( \
+	@printf '\033[0;31m[clean]\033[0m Removing caches\n'
+	@set -eu; \
+	set -- 31 33 32 36 34 35; \
+	for path in $$(find . -type d \( \
 		-name '__pycache__' \
 		-o -name '.mypy_cache' \
 		-o -name '.pytest_cache' \
 		-o -name '.ruff_cache' \
-	\) -prune -exec rm -rf {} +
-	@find . -type f \( \
+	\) -prune -print); do \
+		color=$$1; \
+		printf '\033[0;%sm[clean]\033[0m removing %s\n' "$$color" "$$path"; \
+		rm -rf "$$path"; \
+		shift; \
+		[ $$# -gt 0 ] || set -- 31 33 32 36 34 35; \
+	done; \
+	for path in $$(find . -type f \( \
 		-name '*.pyc' \
 		-o -name '*.pyo' \
-	\) -delete
+	\) -print); do \
+		color=$$1; \
+		printf '\033[0;%sm[clean]\033[0m removing %s\n' "$$color" "$$path"; \
+		rm -f "$$path"; \
+		shift; \
+		[ $$# -gt 0 ] || set -- 31 33 32 36 34 35; \
+	done
