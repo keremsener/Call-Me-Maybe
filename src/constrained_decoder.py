@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/10/08 11:44:29 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/21 17:00:28 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -79,6 +79,8 @@ def constrained_decoder(
         generated_text = small_llm_model.decode(
             encode_list[encode_list_init_len:])
 
+        if generated_text.count("{") > 0 and generated_text.count("{") == generated_text.count("}"):
+            break
         allowed_ids = get_allowed_ids(
             generated_text,
             current_state,
@@ -90,7 +92,7 @@ def constrained_decoder(
         if allowed_ids is not None:
             logits = validate(logits, allowed_ids)
 
-        assert allowed_ids is not None
+        # assert allowed_ids is not None
 
         next_word_id = int(argmax(logits))
         print(small_llm_model.decode([next_word_id]), end="", flush=True)
@@ -125,7 +127,8 @@ def constrained_decoder(
             )
             param_names = list(
                 selected_fn["parameters"].keys()) if selected_fn else []
-            written = [p for p in param_names if f'"{p}": ' in generated_text]
+            param_text = generated_text.split('"parameters":')[-1]
+            written = [p for p in param_names if f'"{p}": ' in param_text]
             remaining = [p for p in param_names if p not in written]
 
             if remaining:
@@ -163,3 +166,7 @@ def constrained_decoder(
 
     print()
     return str(small_llm_model.decode(encode_list[encode_list_init_len:]))
+
+# NEW ERROR:
+# Warning: Could not decode model output for prompt'Replace all numbers in "Hello 34 I'm 233 years old" with NUMBERS': Expecting ',' delimiter: line 1 column 86 (char 85)
+# EVE GEÇİNCE FİXLENECEK

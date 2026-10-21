@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/29 14:12:55 by ksener          #+#    #+#               #
-#  Updated: 2026/10/08 11:36:47 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/21 16:45:26 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -87,8 +87,9 @@ def get_allowed_ids(
     if current_state == ExpectState.PARAM_KEY:
         return [params_key_ids[current_index]]
     if current_state == ExpectState.PARAM_NAME:
+        param_text = generated_text.split('"parameters":')[-1]
         written_params = [
-            p for p in param_names if f'"{p}": ' in generated_text
+            p for p in param_names if f'"{p}": ' in param_text
         ]
         remaining_params = [p for p in param_names if p not in written_params]
 
@@ -101,8 +102,9 @@ def get_allowed_ids(
             return [encoded_param[current_index]]
         return _encode_token_ids(small_llm_model, "}")
     if current_state == ExpectState.PARAM_VALUE:
+        param_text = generated_text.split('"parameters":')[-1]
         written_params = [
-            p for p in param_names if f'"{p}":' in generated_text
+            p for p in param_names if f'"{p}":' in param_text
         ]
         current_param = written_params[-1] if written_params else None
 
@@ -133,12 +135,15 @@ def get_allowed_ids(
                 return allowed_tokens
 
             if param_type == "string":
-                allowed_tokens = _encode_token_ids(small_llm_model, '"')
-
-                if has_value_started:
-                    allowed_tokens.extend(exit_id)
-
-                return allowed_tokens
+                val_text = param_text.split(f'"{current_param}":')[-1]
+                quotes = val_text.count('"') - val_text.count('\\"')
+                
+                if quotes == 0:
+                    return _encode_token_ids(small_llm_model, ' "') + _encode_token_ids(small_llm_model, '"')
+                elif quotes == 1:
+                    return None 
+                else:
+                    return exit_id
     elif current_state == ExpectState.MAIN_CLOSE:
         return _encode_token_ids(small_llm_model, "}")
 
