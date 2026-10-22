@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/10/22 11:55:39 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/22 14:41:01 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -79,10 +79,8 @@ def constrained_decoder(
         generated_text = small_llm_model.decode(
             encode_list[encode_list_init_len:])
 
-        if (
-            generated_text.count("{") > 0 and
-            generated_text.count("{") == generated_text.count("}")
-        ):
+        if (generated_text.count("{") > 0 and
+                generated_text.count("{") == generated_text.count("}")):
             break
         allowed_ids = get_allowed_ids(
             generated_text,
@@ -94,11 +92,20 @@ def constrained_decoder(
 
         if allowed_ids is not None:
             logits = validate(logits, allowed_ids)
-
         next_word_id = int(argmax(logits))
         print(small_llm_model.decode([next_word_id]), end="", flush=True)
 
-        if allowed_ids is not None:
+        if current_state == ExpectState.PARAM_VALUE:
+            comma_ids = small_llm_model.encode(", ").tolist()[0]
+            close_params_ids = small_llm_model.encode("}").tolist()[0]
+
+            if next_word_id in comma_ids:
+                current_state = ExpectState.PARAM_NAME
+                current_index = -1
+            elif next_word_id in close_params_ids:
+                current_state = ExpectState.MAIN_CLOSE
+                current_index = -1
+        elif allowed_ids is not None:
             if (current_state == ExpectState.BRACKET and
                     next_word_id in allowed_ids):
                 current_state = ExpectState.NAME_KEY
@@ -111,14 +118,10 @@ def constrained_decoder(
             elif (current_state == ExpectState.FUNC_NAME and
                   next_word_id in allowed_ids):
                 test_text = small_llm_model.decode(
-                    encode_list + [next_word_id]
-                )
+                    encode_list + [next_word_id])
                 valid_func_names = [fn["name"] for fn in all_functions]
-
-                if any(
-                    test_text.endswith(fname)
-                    for fname in valid_func_names
-                ):
+                if (any(test_text.endswith(fname)
+                        for fname in valid_func_names)):
                     current_state = ExpectState.PARAM_KEY
                     current_index = -1
             elif (current_state == ExpectState.PARAM_KEY and
@@ -129,19 +132,14 @@ def constrained_decoder(
             elif (current_state == ExpectState.PARAM_NAME and
                   next_word_id == allowed_ids[-1]):
                 selected_fn = next(
-                    (
-                        fn
-                        for fn in all_functions
-                        if fn["name"] in generated_text
-                    ),
+                    (fn for fn in all_functions if fn["name"]
+                     in generated_text),
                     None,
                 )
                 param_names = list(
                     selected_fn["parameters"].keys()) if selected_fn else []
                 param_text = generated_text.split('"parameters":')[-1]
-                written = [
-                    p for p in param_names if f'"{p}": ' in param_text
-                ]
+                written = [p for p in param_names if f'"{p}": ' in param_text]
                 remaining = [p for p in param_names if p not in written]
 
                 if remaining:
@@ -155,16 +153,6 @@ def constrained_decoder(
                     if current_index == param_name_len - 1:
                         current_state = ExpectState.PARAM_VALUE
                         current_index = -1
-        elif current_state == ExpectState.PARAM_VALUE:
-            comma_ids = small_llm_model.encode(", ").tolist()[0]
-            close_params_ids = small_llm_model.encode("}").tolist()[0]
-
-            if next_word_id in comma_ids:
-                current_state = ExpectState.PARAM_NAME
-                current_index = -1
-            elif next_word_id in close_params_ids:
-                current_state = ExpectState.MAIN_CLOSE
-                current_index = -1
         elif current_state == ExpectState.MAIN_CLOSE:
             close_main_id = small_llm_model.encode("}").tolist()[0]
             if next_word_id in close_main_id:
