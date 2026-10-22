@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/29 14:12:55 by ksener          #+#    #+#               #
-#  Updated: 2026/10/22 11:48:19 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/22 14:48:30 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -145,6 +145,15 @@ def get_allowed_ids(
                     return None
                 else:
                     return exit_id
+            if param_type in {"boolean", "bool"}:
+                true_ids = _encode_token_ids(small_llm_model, "true")
+                false_ids = _encode_token_ids(small_llm_model, "false")
+                allowed_tokens = true_ids + false_ids
+
+                if has_value_started:
+                    allowed_tokens.extend(exit_id)
+
+                return allowed_tokens
     elif current_state == ExpectState.MAIN_CLOSE:
         return _encode_token_ids(small_llm_model, "}")
 
