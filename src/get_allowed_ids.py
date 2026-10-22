@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/29 14:12:55 by ksener          #+#    #+#               #
-#  Updated: 2026/10/21 16:45:26 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/22 11:48:19 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -137,11 +137,12 @@ def get_allowed_ids(
             if param_type == "string":
                 val_text = param_text.split(f'"{current_param}":')[-1]
                 quotes = val_text.count('"') - val_text.count('\\"')
-                
                 if quotes == 0:
-                    return _encode_token_ids(small_llm_model, ' "') + _encode_token_ids(small_llm_model, '"')
+                    encode_ids1 = _encode_token_ids(small_llm_model, ' "')
+                    encode_ids2 = _encode_token_ids(small_llm_model, '"')
+                    return encode_ids1 + encode_ids2
                 elif quotes == 1:
-                    return None 
+                    return None
                 else:
                     return exit_id
     elif current_state == ExpectState.MAIN_CLOSE:
