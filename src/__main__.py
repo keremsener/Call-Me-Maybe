@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:09 by ksener          #+#    #+#               #
-#  Updated: 2026/10/08 12:36:04 by ksener          ###   ########.fr        #
+#  Updated: 2026/10/23 12:50:53 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -90,6 +90,9 @@ def main() -> None:
 
         with open(output_path, 'w', encoding='utf-8') as file:
             dump(results, file, indent=2)
+        # sys.stdout.write("\033[H\033[2J")
+        # sys.stdout.flush()
+        print("\nSuccessfully written:", output_path)
     except OSError as exc:
 
         print(
