@@ -129,7 +129,14 @@ def get_allowed_ids(
                 dot_id = _encode_token_ids(small_llm_model, ".")
                 minus_id = _encode_token_ids(small_llm_model, "-")
                 allowed_tokens = digit_ids + dot_id + minus_id
-                if has_value_started:
+                number_text = param_text.split(
+                    f'"{current_param}":'
+                )[-1].strip()
+                has_float_value = (
+                    "." in number_text
+                    and number_text.rsplit(".", 1)[-1].isdigit()
+                )
+                if has_value_started and has_float_value:
                     allowed_tokens.extend(exit_id)
 
                 return allowed_tokens
