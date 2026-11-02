@@ -6,7 +6,7 @@
 #  By: ksener <ksener@student.42kocaeli.com.tr   +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/09/24 16:29:11 by ksener          #+#    #+#               #
-#  Updated: 2026/10/22 15:14:53 by ksener          ###   ########.fr        #
+#  Updated: 2026/11/02 14:02:11 by ksener          ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -167,5 +167,3 @@ def constrained_decoder(
 
     print()
     return str(small_llm_model.decode(encode_list[encode_list_init_len:]))
-
-#test
